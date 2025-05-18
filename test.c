@@ -4,9 +4,24 @@
 
 int main()
 {
+char name[50];
+    int age;
     sqlite3 *db;
     char *errMsg = 0;
     int input;
+
+    // Ask user for their name
+    printf("Enter your name: ");
+    // Use fgets for safety, but trim newline
+    if (fgets(name, sizeof(name), stdin)) {
+        size_t len = strlen(name);
+        if (len > 0 && name[len-1] == '\n') {
+            name[len-1] = '\0';
+        }
+    }
+
+    printf("Enter your age: ");
+    scanf("%d", &age);
 
     input = sqlite3_open("base.db", &db);
     if (input)
@@ -25,12 +40,28 @@ int main()
     }
 
     input = sqlite3_exec(db, "INSERT INTO users (name, age) VALUES ('John', 30), ('Dee', 25), ('Bob', 44)", NULL, NULL, &errMsg);
+    
     if (input != SQLITE_OK)
     {
         fprintf(stderr, "SQL error: %s\n", errMsg);
         sqlite3_free(errMsg);
         return 1;
     }
+
+    //Insert personalized
+    sqlite3_stmt *insertStatement;
+    input = sqlite3_prepare_v2(db, "INSERT INTO users (name, age) VALUES (?, ?)", -1, &insertStatement, NULL);
+    if (input == SQLITE_OK)
+    {
+        sqlite3_bind_text(insertStatement, 1, name, -1, SQLITE_STATIC);
+        sqlite3_bind_int(insertStatement, 2, age);
+        if (sqlite3_step(insertStatement) != SQLITE_DONE)
+        {
+            fprintf(stderr, "Insert failed: %s\n", sqlite3_errmsg(db));
+        }
+    }
+    sqlite3_finalize(insertStatement);
+
 
     // Query the database
     sqlite3_stmt *statement;
